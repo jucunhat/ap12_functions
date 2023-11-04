@@ -1,3 +1,25 @@
+DROP ROUTINE IF EXISTS fn_consultar_saldo
+CREATE OR REPLACE FUNCTION fn_consultar_saldo (IN p_cod_cliente INT, IN p_cod_conta INT) RETURNS NUMERIC(10,2)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+	v_saldo NUMERIC(10, 2);
+BEGIN
+	SELECT saldo FROM tb_conta c WHERE c.cod_cliente = p_cod_cliente AND c.cod_conta = p_cod_conta INTO v_saldo;
+RETURN v_saldo;
+END;
+$$ 
+DO $$
+DECLARE
+	v_cod_cliente INT := 2;
+	v_cod_conta INT := 4;
+	v_saldo NUMERIC(10, 2);
+BEGIN
+	SELECT fn_consultar_saldo (v_cod_cliente, v_cod_conta) INTO v_saldo; 
+	RAISE NOTICE 'O saldo da conta % do cliente % é: %', v_cod_conta, v_cod_cliente, v_saldo;
+END;
+$$
+
 -- --routine se aplica a funções e procedimentos
 -- DROP ROUTINE IF EXISTS fn_depositar;
 -- CREATE OR REPLACE FUNCTION fn_depositar (IN p_cod_cliente INT, IN p_cod_conta INT,
@@ -42,8 +64,8 @@
 -- $$
 -- DO $$
 -- DECLARE
--- 	v_cod_cliente INT := 1;
--- 	v_saldo NUMERIC (10, 2) := 500;
+-- 	v_cod_cliente INT := 2;
+-- 	v_saldo NUMERIC (10, 2) := 700;
 -- 	v_cod_tipo_conta INT := 1;
 -- 	v_resultado BOOLEAN;
 -- BEGIN
@@ -58,7 +80,6 @@
 -- WHEN v_resultado THEN '' ELSE ' não' END);
 -- END;
 -- $$
-
 
 -- CREATE TABLE tb_cliente(
 -- 	cod_cliente SERIAL PRIMARY KEY,
@@ -85,4 +106,4 @@
 -- 	CONSTRAINT fk_tipo_conta FOREIGN KEY (cod_tipo_conta) REFERENCES
 -- tb_tipo_conta(cod_tipo_conta)
 -- );
---SELECT * FROM tb_conta;
+SELECT * FROM tb_conta;
