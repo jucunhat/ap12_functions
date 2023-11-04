@@ -1,24 +1,62 @@
-DROP ROUTINE IF EXISTS fn_consultar_saldo
-CREATE OR REPLACE FUNCTION fn_consultar_saldo (IN p_cod_cliente INT, IN p_cod_conta INT) RETURNS NUMERIC(10,2)
-LANGUAGE plpgsql
-AS $$
+CREATE OR REPLACE FUNCTION fn_transferir(IN p_cod_cliente_remetente INT, IN p_cod_conta_remetente INT,
+										IN p_cod_cliente_destinatario INT, IN p_cod_conta_destinatario INT,
+										IN valor_transferencia NUMERIC(10, 2)) RETURNS BOOLEAN
+LANGUAGE plpgsql AS $$
 DECLARE
-	v_saldo NUMERIC(10, 2);
+	saldo_remetente NUMERIC(10, 2);
+	saldo_destinatario NUMERIC(10, 2);
 BEGIN
-	SELECT saldo FROM tb_conta c WHERE c.cod_cliente = p_cod_cliente AND c.cod_conta = p_cod_conta INTO v_saldo;
-RETURN v_saldo;
-END;
-$$ 
+	SELECT saldo FROM tb_conta c WHERE c.cod_cliente = p_cod_cliente_remetente 
+	AND c.cod_conta = p_cod_conta_remetente INTO saldo_remetente;
+	IF saldo_remetente < valor_transferencia THEN
+		RETURN FALSE;
+	END IF;
+	SELECT saldo FROM tb_conta c WHERE c.cod_cliente = p_cod_cliente_destinatario 
+	AND c.cod_conta = p_cod_conta_destinatario INTO saldo_destinatario;
+	UPDATE tb_conta c SET saldo = saldo_remetente - valor_transferencia WHERE
+	c.cod_cliente = p_cod_cliente_remetente AND c.cod_conta = p_cod_conta_remetente;
+	UPDATE tb_conta c SET saldo = saldo_destinatario + valor_transferencia WHERE
+	c.cod_cliente = p_cod_cliente_destinatario AND c.cod_conta = p_cod_conta_destinatario;
+	RETURN TRUE;
+EXCEPTION
+	WHEN OTHERS THEN
+		RETURN FALSE;
+END; 
+$$
 DO $$
 DECLARE
-	v_cod_cliente INT := 2;
-	v_cod_conta INT := 4;
-	v_saldo NUMERIC(10, 2);
+    p_cod_cliente_remetente INT := 1;
+    p_cod_conta_remetente INT := 2;
+    p_cod_cliente_destinatario INT := 2;
+    p_cod_conta_destinatario INT := 4;
+    valor_transferencia NUMERIC := 100;
+    resultado BOOLEAN;
 BEGIN
-	SELECT fn_consultar_saldo (v_cod_cliente, v_cod_conta) INTO v_saldo; 
-	RAISE NOTICE 'O saldo da conta % do cliente % é: %', v_cod_conta, v_cod_cliente, v_saldo;
-END;
-$$
+    SELECT fn_transferir(p_cod_cliente_remetente, p_cod_conta_remetente, p_cod_cliente_destinatario, p_cod_conta_destinatario, valor_transferencia) INTO resultado;
+    RAISE NOTICE '%', resultado;
+END; $$
+
+-- DROP ROUTINE IF EXISTS fn_consultar_saldo
+-- CREATE OR REPLACE FUNCTION fn_consultar_saldo (IN p_cod_cliente INT, IN p_cod_conta INT) RETURNS NUMERIC(10,2)
+-- LANGUAGE plpgsql
+-- AS $$
+-- DECLARE
+-- 	v_saldo NUMERIC(10, 2);
+-- BEGIN
+-- 	SELECT saldo FROM tb_conta c WHERE c.cod_cliente = p_cod_cliente AND c.cod_conta = p_cod_conta INTO v_saldo;
+-- RETURN v_saldo;
+-- END;
+-- $$ 
+-- DO $$
+-- DECLARE
+-- 	v_cod_cliente INT := 2;
+-- 	v_cod_conta INT := 4;
+-- 	v_saldo NUMERIC(10, 2);
+-- BEGIN
+-- 	SELECT fn_consultar_saldo (v_cod_cliente, v_cod_conta) INTO v_saldo; 
+-- 	RAISE NOTICE 'O saldo da conta % do cliente % é: %', v_cod_conta, v_cod_cliente, v_saldo;
+-- END;
+-- $$
 
 -- --routine se aplica a funções e procedimentos
 -- DROP ROUTINE IF EXISTS fn_depositar;
